@@ -32,3 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 /src/main/resources/images/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/

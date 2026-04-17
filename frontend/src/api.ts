@@ -5,10 +5,41 @@ import type {
   ImageVisibilityPayload,
 } from './types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:8080'
 
 function buildUrl(path: string): string {
   return `${API_BASE_URL}${path}`
+}
+
+function looksLikeHtml(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  return normalized.startsWith('<!doctype html') || normalized.startsWith('<html')
+}
+
+function toUserErrorMessage(response: Response, rawBody: string, contentType: string | null): string {
+  if (contentType?.includes('application/json')) {
+    try {
+      const payload = JSON.parse(rawBody) as { message?: string; error?: string }
+      if (payload.message?.trim()) return payload.message
+      if (payload.error?.trim()) return payload.error
+    } catch {
+      // Fallback below
+    }
+  }
+
+  if (contentType?.includes('text/html') || looksLikeHtml(rawBody)) {
+    if (response.status === 404) {
+      return 'Could not reach the API endpoint (404). Verify VITE_API_BASE_URL points to the backend.'
+    }
+    return `Unexpected HTML response from API (${response.status}). Verify backend URL configuration.`
+  }
+
+  const text = rawBody.trim()
+  if (text.length > 0) {
+    return text
+  }
+
+  return `Request failed: ${response.status} ${response.statusText}`
 }
 
 async function apiRequest<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
@@ -20,10 +51,16 @@ async function apiRequest<T>(path: string, init?: RequestInit, token?: string): 
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(buildUrl(path), { ...init, headers })
+  let response: Response
+  try {
+    response = await fetch(buildUrl(path), { ...init, headers })
+  } catch {
+    throw new Error('Could not connect to the API. Check backend availability and CORS settings.')
+  }
+
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `${response.status} ${response.statusText}`)
+    const rawBody = await response.text()
+    throw new Error(toUserErrorMessage(response, rawBody, response.headers.get('Content-Type')))
   }
 
   if (response.status === 204) {

@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.example.galleryproject.client.SupabaseClient;
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.springframework.stereotype.Service;
 
@@ -62,6 +63,10 @@ public class GalleryService {
 
     public Optional<GalleryImage> updateImageMetadata(int id, ImageRequestDto imageRequest) {
         return client.updateImageMetadata(id, imageRequest.title(), imageRequest.description());
+    }
+
+    public Optional<GalleryImage> updateImageVisibility(int id, ImageVisibilityRequestDto visibilityRequest) {
+        return client.updateImageVisibility(id, visibilityRequest.hidden());
     }
 
 }

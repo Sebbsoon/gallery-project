@@ -3,11 +3,13 @@ package org.example.galleryproject.controller;
 import java.util.List;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -54,6 +56,16 @@ public class GalleryController {
             @Valid @RequestBody ImageRequestDto imageRequest
     ) {
         return galleryService.updateImageMetadata(id, imageRequest)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<GalleryImage> updateImageVisibility(
+            @PathVariable int id,
+            @Valid @RequestBody ImageVisibilityRequestDto visibilityRequest
+    ) {
+        return galleryService.updateImageVisibility(id, visibilityRequest)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

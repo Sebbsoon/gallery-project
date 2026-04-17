@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/images/upload").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/images/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/images/*/visibility").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

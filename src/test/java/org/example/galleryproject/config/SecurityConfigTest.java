@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -92,6 +94,36 @@ class SecurityConfigTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .contentType("application/json")
                         .content("{\"title\":\"Updated\",\"description\":\"Desc\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateVisibilityRequiresAuthentication() throws Exception {
+        mockMvc.perform(patch("/api/images/1/visibility")
+                        .contentType("application/json")
+                        .content("{\"hidden\":true}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updateVisibilityForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(patch("/api/images/1/visibility")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt())
+                        .contentType("application/json")
+                        .content("{\"hidden\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateVisibilityForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.updateImageVisibility(anyInt(), any(ImageVisibilityRequestDto.class)))
+                .thenReturn(Optional.of(sampleImage(1L)));
+
+        mockMvc.perform(patch("/api/images/1/visibility")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .contentType("application/json")
+                        .content("{\"hidden\":true}"))
                 .andExpect(status().isOk());
     }
 

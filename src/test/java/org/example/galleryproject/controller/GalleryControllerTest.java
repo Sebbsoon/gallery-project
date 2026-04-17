@@ -1,6 +1,7 @@
 package org.example.galleryproject.controller;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class GalleryControllerTest {
     void getAllImagesReturnsOkAndBody() {
         List<GalleryImage> expected = List.of(sampleImage(1L));
         GalleryController controller = new GalleryController(
-                new StubGalleryService(expected, Optional.empty(), Optional.empty(), false)
+                new StubGalleryService(expected, Optional.empty(), Optional.empty(), Optional.empty(), false)
         );
 
         ResponseEntity<List<GalleryImage>> response = controller.getAllImages();
@@ -32,7 +33,7 @@ class GalleryControllerTest {
     void getImagesByIdReturnsOkWhenImageExists() {
         GalleryImage expected = sampleImage(10L);
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.of(expected), Optional.empty(), false)
+                new StubGalleryService(List.of(), Optional.of(expected), Optional.empty(), Optional.empty(), false)
         );
 
         ResponseEntity<GalleryImage> response = controller.getImagesById(10);
@@ -45,7 +46,7 @@ class GalleryControllerTest {
     @Test
     void getImagesByIdReturnsNotFoundWhenImageDoesNotExist() {
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), false)
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.empty(), false)
         );
 
         ResponseEntity<GalleryImage> response = controller.getImagesById(999);
@@ -57,7 +58,7 @@ class GalleryControllerTest {
     @Test
     void uploadLocalImagesReturnsOkOnSuccess() {
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), false)
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.empty(), false)
         );
 
         ResponseEntity<Object> response = controller.uploadLocalImages();
@@ -69,7 +70,7 @@ class GalleryControllerTest {
     @Test
     void uploadLocalImagesReturnsServerErrorOnFailure() {
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), true)
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.empty(), true)
         );
 
         ResponseEntity<Object> response = controller.uploadLocalImages();
@@ -82,7 +83,7 @@ class GalleryControllerTest {
     void updateImageMetadataReturnsOkWhenImageExists() {
         GalleryImage expected = sampleImage(10L);
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.empty(), Optional.of(expected), false)
+                new StubGalleryService(List.of(), Optional.empty(), Optional.of(expected), Optional.empty(), false)
         );
 
         ResponseEntity<GalleryImage> response = controller.updateImageMetadata(10, new ImageRequestDto("Title", "Desc"));
@@ -95,10 +96,42 @@ class GalleryControllerTest {
     @Test
     void updateImageMetadataReturnsNotFoundWhenImageDoesNotExist() {
         GalleryController controller = new GalleryController(
-                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), false)
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.empty(), false)
         );
 
         ResponseEntity<GalleryImage> response = controller.updateImageMetadata(10, new ImageRequestDto("Title", "Desc"));
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void updateImageVisibilityReturnsOkWhenImageExists() {
+        GalleryImage expected = sampleImage(11L);
+        GalleryController controller = new GalleryController(
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.of(expected), false)
+        );
+
+        ResponseEntity<GalleryImage> response = controller.updateImageVisibility(
+                11,
+                new ImageVisibilityRequestDto(Boolean.TRUE)
+        );
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+    }
+
+    @Test
+    void updateImageVisibilityReturnsNotFoundWhenImageDoesNotExist() {
+        GalleryController controller = new GalleryController(
+                new StubGalleryService(List.of(), Optional.empty(), Optional.empty(), Optional.empty(), false)
+        );
+
+        ResponseEntity<GalleryImage> response = controller.updateImageVisibility(
+                11,
+                new ImageVisibilityRequestDto(Boolean.FALSE)
+        );
 
         assertNotNull(response);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -123,18 +156,21 @@ class GalleryControllerTest {
         private final List<GalleryImage> allImages;
         private final Optional<GalleryImage> imageById;
         private final Optional<GalleryImage> updatedImage;
+        private final Optional<GalleryImage> visibilityUpdatedImage;
         private final boolean failUpload;
 
         StubGalleryService(
                 List<GalleryImage> allImages,
                 Optional<GalleryImage> imageById,
                 Optional<GalleryImage> updatedImage,
+                Optional<GalleryImage> visibilityUpdatedImage,
                 boolean failUpload
         ) {
             super(null);
             this.allImages = allImages;
             this.imageById = imageById;
             this.updatedImage = updatedImage;
+            this.visibilityUpdatedImage = visibilityUpdatedImage;
             this.failUpload = failUpload;
         }
 
@@ -158,6 +194,11 @@ class GalleryControllerTest {
         @Override
         public Optional<GalleryImage> updateImageMetadata(int id, ImageRequestDto imageRequest) {
             return updatedImage;
+        }
+
+        @Override
+        public Optional<GalleryImage> updateImageVisibility(int id, ImageVisibilityRequestDto visibilityRequest) {
+            return visibilityUpdatedImage;
         }
     }
 }

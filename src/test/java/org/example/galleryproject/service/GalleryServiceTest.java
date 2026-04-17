@@ -20,7 +20,8 @@ class GalleryServiceTest {
                 expected,
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty()
+                Optional.empty(),
+                false
         );
         GalleryService service = new GalleryService(client);
 
@@ -36,7 +37,8 @@ class GalleryServiceTest {
                 List.of(),
                 Optional.of(expected),
                 Optional.empty(),
-                Optional.empty()
+                Optional.empty(),
+                false
         );
         GalleryService service = new GalleryService(client);
 
@@ -52,7 +54,8 @@ class GalleryServiceTest {
                 List.of(),
                 Optional.empty(),
                 Optional.of(expected),
-                Optional.empty()
+                Optional.empty(),
+                false
         );
         GalleryService service = new GalleryService(client);
 
@@ -68,13 +71,30 @@ class GalleryServiceTest {
                 List.of(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of(expected)
+                Optional.of(expected),
+                false
         );
         GalleryService service = new GalleryService(client);
 
         GalleryImage actual = service.updateImageVisibility(42, new ImageVisibilityRequestDto(Boolean.TRUE)).orElseThrow();
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void deleteImageDelegatesToClient() {
+        StubSupabaseClient client = new StubSupabaseClient(
+                List.of(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                true
+        );
+        GalleryService service = new GalleryService(client);
+
+        boolean deleted = service.deleteImage(42);
+
+        assertEquals(true, deleted);
     }
 
     private static GalleryImage sampleImage(long id) {
@@ -97,18 +117,21 @@ class GalleryServiceTest {
         private final Optional<GalleryImage> imageById;
         private final Optional<GalleryImage> updatedImage;
         private final Optional<GalleryImage> visibilityUpdatedImage;
+        private final boolean deleteResult;
 
         StubSupabaseClient(
                 List<GalleryImage> allImages,
                 Optional<GalleryImage> imageById,
                 Optional<GalleryImage> updatedImage,
-                Optional<GalleryImage> visibilityUpdatedImage
+                Optional<GalleryImage> visibilityUpdatedImage,
+                boolean deleteResult
         ) {
             super("image-gallery", "images", "https://example.com", "key");
             this.allImages = allImages;
             this.imageById = imageById;
             this.updatedImage = updatedImage;
             this.visibilityUpdatedImage = visibilityUpdatedImage;
+            this.deleteResult = deleteResult;
         }
 
         @Override
@@ -129,6 +152,11 @@ class GalleryServiceTest {
         @Override
         public Optional<GalleryImage> updateImageVisibility(int id, boolean hidden) {
             return visibilityUpdatedImage;
+        }
+
+        @Override
+        public boolean deleteImage(int id) {
+            return deleteResult;
         }
     }
 }

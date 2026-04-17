@@ -69,4 +69,8 @@ public class GalleryService {
         return client.updateImageVisibility(id, visibilityRequest.hidden());
     }
 
+    public boolean deleteImage(int id) {
+        return client.deleteImage(id);
+    }
+
 }

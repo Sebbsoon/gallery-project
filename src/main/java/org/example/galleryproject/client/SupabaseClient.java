@@ -1,6 +1,7 @@
 package org.example.galleryproject.client;
 
 import org.example.galleryproject.client.dto.SignedUrlResponse;
+import org.example.galleryproject.client.dto.GalleryImagePath;
 import org.example.galleryproject.client.dto.SupabaseImageRecord;
 import org.example.galleryproject.client.dto.SupabaseImageTagRecord;
 import org.example.galleryproject.model.GalleryImage;
@@ -31,6 +32,8 @@ public class SupabaseClient {
     private static final ParameterizedTypeReference<List<SupabaseImageRecord>> IMAGE_LIST_TYPE =
             new ParameterizedTypeReference<>() {};
     private static final ParameterizedTypeReference<List<SupabaseImageTagRecord>> IMAGE_TAG_LIST_TYPE =
+            new ParameterizedTypeReference<>() {};
+    private static final ParameterizedTypeReference<List<GalleryImagePath>> IMAGE_PATH_LIST_TYPE =
             new ParameterizedTypeReference<>() {};
 
     public SupabaseClient(@Value("${supabase.bucket-name}")
@@ -183,6 +186,32 @@ public class SupabaseClient {
             images.add(toGalleryImage(row, tagsByImageId.getOrDefault(row.id(), Collections.emptyList())));
         }
         return images;
+    }
+
+    public boolean deleteImage(int id) {
+        URI uri = UriComponentsBuilder.fromPath("/rest/v1/{table}")
+                .queryParam("id", "eq." + id)
+                .queryParam("select", "bucket_path")
+                .buildAndExpand(SUPABASE_DB_NAME)
+                .toUri();
+
+        List<GalleryImagePath> deletedRows = restClient.delete()
+                .uri(uri)
+                .header("Prefer", "return=representation")
+                .retrieve()
+                .body(IMAGE_PATH_LIST_TYPE);
+
+        if (deletedRows == null || deletedRows.isEmpty()) {
+            return false;
+        }
+
+        String bucketPath = deletedRows.getFirst().bucket_path();
+        restClient.delete()
+                .uri("/storage/v1/object/{bucketPath}", bucketPath)
+                .retrieve()
+                .toBodilessEntity();
+
+        return true;
     }
 
     private Map<Long, List<String>> fetchTagsByImageIds(List<Long> imageIds) {

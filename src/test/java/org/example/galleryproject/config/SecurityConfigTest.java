@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -125,6 +126,29 @@ class SecurityConfigTest {
                         .contentType("application/json")
                         .content("{\"hidden\":true}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteImageRequiresAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/images/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deleteImageForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(delete("/api/images/1")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteImageForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.deleteImage(anyInt())).thenReturn(true);
+
+        mockMvc.perform(delete("/api/images/1")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isNoContent());
     }
 
     private GalleryImage sampleImage(long id) {

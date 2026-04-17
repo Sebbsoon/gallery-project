@@ -137,6 +137,51 @@ class GalleryControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
+    @Test
+    void deleteImageReturnsNoContentWhenImageExists() {
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public boolean deleteImage(int id) {
+                return true;
+            }
+        });
+
+        ResponseEntity<Void> response = controller.deleteImage(1);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
+    void deleteImageReturnsNotFoundWhenImageDoesNotExist() {
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public boolean deleteImage(int id) {
+                return false;
+            }
+        });
+
+        ResponseEntity<Void> response = controller.deleteImage(1);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void deleteImageReturnsServerErrorWhenDeletionFails() {
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public boolean deleteImage(int id) {
+                throw new RuntimeException("delete failed");
+            }
+        });
+
+        ResponseEntity<Void> response = controller.deleteImage(1);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    }
+
     private static GalleryImage sampleImage(long id) {
         return new GalleryImage(
                 id,

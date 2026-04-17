@@ -3,6 +3,7 @@ package org.example.galleryproject.controller;
 import java.util.List;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageTagsRequestDto;
 import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
@@ -82,5 +83,25 @@ public class GalleryController {
         } catch (RuntimeException e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @PostMapping("/{id}/tags")
+    public ResponseEntity<GalleryImage> addImageTags(
+            @PathVariable int id,
+            @Valid @RequestBody ImageTagsRequestDto tagsRequest
+    ) {
+        return galleryService.addImageTags(id, tagsRequest)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/tags/{tagName}")
+    public ResponseEntity<GalleryImage> removeImageTag(
+            @PathVariable int id,
+            @PathVariable String tagName
+    ) {
+        return galleryService.removeImageTag(id, tagName)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

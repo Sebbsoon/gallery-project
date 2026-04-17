@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageTagsRequestDto;
 import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
@@ -149,6 +150,60 @@ class SecurityConfigTest {
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void addTagsRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/images/1/tags")
+                        .contentType("application/json")
+                        .content("{\"tags\":[\"nature\"]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void addTagsForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(post("/api/images/1/tags")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt())
+                        .contentType("application/json")
+                        .content("{\"tags\":[\"nature\"]}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void addTagsForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.addImageTags(anyInt(), any(ImageTagsRequestDto.class)))
+                .thenReturn(Optional.of(sampleImage(1L)));
+
+        mockMvc.perform(post("/api/images/1/tags")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .contentType("application/json")
+                        .content("{\"tags\":[\"nature\"]}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void removeTagRequiresAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/images/1/tags/nature"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void removeTagForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(delete("/api/images/1/tags/nature")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void removeTagForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.removeImageTag(anyInt(), any(String.class)))
+                .thenReturn(Optional.of(sampleImage(1L)));
+
+        mockMvc.perform(delete("/api/images/1/tags/nature")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk());
     }
 
     private GalleryImage sampleImage(long id) {

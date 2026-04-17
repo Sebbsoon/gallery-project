@@ -27,9 +27,11 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/images/upload").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/images/*/tags").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/images/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/images/*/visibility").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/images/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/images/*/tags/*").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

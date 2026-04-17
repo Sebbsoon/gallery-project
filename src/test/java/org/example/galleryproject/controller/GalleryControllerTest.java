@@ -1,6 +1,7 @@
 package org.example.galleryproject.controller;
 
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageTagsRequestDto;
 import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
@@ -180,6 +181,70 @@ class GalleryControllerTest {
 
         assertNotNull(response);
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    }
+
+    @Test
+    void addImageTagsReturnsOkWhenImageExists() {
+        GalleryImage expected = sampleImage(12L);
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public Optional<GalleryImage> addImageTags(int id, ImageTagsRequestDto tagsRequest) {
+                return Optional.of(expected);
+            }
+        });
+
+        ResponseEntity<GalleryImage> response = controller.addImageTags(12, new ImageTagsRequestDto(List.of("nature")));
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+    }
+
+    @Test
+    void addImageTagsReturnsNotFoundWhenImageDoesNotExist() {
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public Optional<GalleryImage> addImageTags(int id, ImageTagsRequestDto tagsRequest) {
+                return Optional.empty();
+            }
+        });
+
+        ResponseEntity<GalleryImage> response = controller.addImageTags(12, new ImageTagsRequestDto(List.of("nature")));
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void removeImageTagReturnsOkWhenTagExists() {
+        GalleryImage expected = sampleImage(13L);
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public Optional<GalleryImage> removeImageTag(int id, String tagName) {
+                return Optional.of(expected);
+            }
+        });
+
+        ResponseEntity<GalleryImage> response = controller.removeImageTag(13, "nature");
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+    }
+
+    @Test
+    void removeImageTagReturnsNotFoundWhenTagMissing() {
+        GalleryController controller = new GalleryController(new GalleryService(null) {
+            @Override
+            public Optional<GalleryImage> removeImageTag(int id, String tagName) {
+                return Optional.empty();
+            }
+        });
+
+        ResponseEntity<GalleryImage> response = controller.removeImageTag(13, "nature");
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     private static GalleryImage sampleImage(long id) {

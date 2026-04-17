@@ -6,9 +6,11 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.example.galleryproject.client.SupabaseClient;
 import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.controller.dto.ImageTagsRequestDto;
 import org.example.galleryproject.controller.dto.ImageVisibilityRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.springframework.stereotype.Service;
@@ -71,6 +73,18 @@ public class GalleryService {
 
     public boolean deleteImage(int id) {
         return client.deleteImage(id);
+    }
+
+    public Optional<GalleryImage> addImageTags(int id, ImageTagsRequestDto tagsRequest) {
+        List<String> normalizedTags = tagsRequest.tags().stream()
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+        return client.addTagsToImage(id, normalizedTags);
+    }
+
+    public Optional<GalleryImage> removeImageTag(int id, String tagName) {
+        return client.removeTagFromImage(id, tagName.trim());
     }
 
 }

@@ -2,8 +2,11 @@ package org.example.galleryproject.client;
 
 import org.example.galleryproject.client.dto.SignedUrlResponse;
 import org.example.galleryproject.client.dto.GalleryImagePath;
+import org.example.galleryproject.client.dto.SupabaseImageIdRecord;
 import org.example.galleryproject.client.dto.SupabaseImageRecord;
+import org.example.galleryproject.client.dto.SupabaseImageTagLinkRecord;
 import org.example.galleryproject.client.dto.SupabaseImageTagRecord;
+import org.example.galleryproject.client.dto.SupabaseTagRecord;
 import org.example.galleryproject.model.GalleryImage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -34,6 +37,12 @@ public class SupabaseClient {
     private static final ParameterizedTypeReference<List<SupabaseImageTagRecord>> IMAGE_TAG_LIST_TYPE =
             new ParameterizedTypeReference<>() {};
     private static final ParameterizedTypeReference<List<GalleryImagePath>> IMAGE_PATH_LIST_TYPE =
+            new ParameterizedTypeReference<>() {};
+    private static final ParameterizedTypeReference<List<SupabaseImageIdRecord>> IMAGE_ID_LIST_TYPE =
+            new ParameterizedTypeReference<>() {};
+    private static final ParameterizedTypeReference<List<SupabaseTagRecord>> TAG_LIST_TYPE =
+            new ParameterizedTypeReference<>() {};
+    private static final ParameterizedTypeReference<List<SupabaseImageTagLinkRecord>> IMAGE_TAG_LINK_LIST_TYPE =
             new ParameterizedTypeReference<>() {};
 
     public SupabaseClient(@Value("${supabase.bucket-name}")
@@ -212,6 +221,136 @@ public class SupabaseClient {
                 .toBodilessEntity();
 
         return true;
+    }
+
+    public Optional<GalleryImage> addTagsToImage(int id, List<String> tags) {
+        if (!imageExists(id)) {
+            return Optional.empty();
+        }
+
+        for (String tagName : tags) {
+            long tagId = getOrCreateTag(tagName);
+            attachTagToImage(id, tagId);
+        }
+
+        return fetchImageById(id);
+    }
+
+    public Optional<GalleryImage> removeTagFromImage(int id, String tagName) {
+        if (!imageExists(id)) {
+            return Optional.empty();
+        }
+
+        Optional<SupabaseTagRecord> tagRecord = findTagByName(tagName);
+        if (tagRecord.isEmpty()) {
+            return Optional.empty();
+        }
+
+        URI deleteUri = UriComponentsBuilder.fromPath("/rest/v1/image_tags")
+                .queryParam("image_id", "eq." + id)
+                .queryParam("tag_id", "eq." + tagRecord.get().id())
+                .queryParam("select", "image_id,tag_id")
+                .build(true)
+                .toUri();
+
+        List<SupabaseImageTagLinkRecord> deletedRows = restClient.delete()
+                .uri(deleteUri)
+                .header("Prefer", "return=representation")
+                .retrieve()
+                .body(IMAGE_TAG_LINK_LIST_TYPE);
+
+        if (deletedRows == null || deletedRows.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return fetchImageById(id);
+    }
+
+    private boolean imageExists(int id) {
+        URI uri = UriComponentsBuilder.fromPath("/rest/v1/{table}")
+                .queryParam("id", "eq." + id)
+                .queryParam("select", "id")
+                .buildAndExpand(SUPABASE_DB_NAME)
+                .toUri();
+
+        List<SupabaseImageIdRecord> rows = restClient.get()
+                .uri(uri)
+                .retrieve()
+                .body(IMAGE_ID_LIST_TYPE);
+
+        return rows != null && !rows.isEmpty();
+    }
+
+    private long getOrCreateTag(String tagName) {
+        Optional<SupabaseTagRecord> existing = findTagByName(tagName);
+        if (existing.isPresent()) {
+            return existing.get().id();
+        }
+
+        URI createUri = UriComponentsBuilder.fromPath("/rest/v1/tags")
+                .queryParam("on_conflict", "name")
+                .queryParam("select", "id,name")
+                .build(true)
+                .toUri();
+
+        List<SupabaseTagRecord> createdRows;
+        try {
+            createdRows = restClient.post()
+                    .uri(createUri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Prefer", "resolution=merge-duplicates,return=representation")
+                    .body(Map.of("name", tagName))
+                    .retrieve()
+                    .body(TAG_LIST_TYPE);
+        } catch (RuntimeException ex) {
+            Optional<SupabaseTagRecord> existingAfterFailure = findTagByName(tagName);
+            if (existingAfterFailure.isPresent()) {
+                return existingAfterFailure.get().id();
+            }
+            throw ex;
+        }
+
+        if (createdRows == null || createdRows.isEmpty()) {
+            throw new IllegalStateException("Failed to create tag: " + tagName);
+        }
+
+        return createdRows.getFirst().id();
+    }
+
+    private Optional<SupabaseTagRecord> findTagByName(String tagName) {
+        URI uri = UriComponentsBuilder.fromPath("/rest/v1/tags")
+                .queryParam("name", "eq." + tagName)
+                .queryParam("select", "id,name")
+                .build()
+                .toUri();
+
+        List<SupabaseTagRecord> rows = restClient.get()
+                .uri(uri)
+                .retrieve()
+                .body(TAG_LIST_TYPE);
+
+        if (rows == null || rows.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(rows.getFirst());
+    }
+
+    private void attachTagToImage(int imageId, long tagId) {
+        URI uri = UriComponentsBuilder.fromPath("/rest/v1/image_tags")
+                .queryParam("on_conflict", "image_id,tag_id")
+                .build(true)
+                .toUri();
+
+        restClient.post()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Prefer", "resolution=merge-duplicates,return=minimal")
+                .body(Map.of(
+                        "image_id", imageId,
+                        "tag_id", tagId
+                ))
+                .retrieve()
+                .toBodilessEntity();
     }
 
     private Map<Long, List<String>> fetchTagsByImageIds(List<Long> imageIds) {

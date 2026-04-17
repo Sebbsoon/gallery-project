@@ -1,17 +1,15 @@
 package org.example.galleryproject.service;
 
-import org.example.galleryproject.client.SupabaseClient;
-import org.example.galleryproject.controller.dto.ImageRequestDto;
-import org.example.galleryproject.model.GalleryImage;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+
+import org.example.galleryproject.client.SupabaseClient;
+import org.example.galleryproject.model.GalleryImage;
+import org.springframework.stereotype.Service;
 
 @Service
 public class GalleryService {
@@ -22,41 +20,43 @@ public class GalleryService {
         this.client = client;
     }
 
-    public Mono<Void> uploadLocalImages() {
-        try {
-            File folder = new File("uploads/images/");
-            File[] files = folder.listFiles();
-            if (files == null || files.length == 0) return Mono.empty();
+    public void uploadLocalImages() {
+        File folder = new File("uploads/images/");
+        File[] files = folder.listFiles();
+        if (files == null || files.length == 0) {
+            return;
+        }
 
-            Mono<Void> uploads = Mono.empty();
-            for (File file : files) {
-                uploads = uploads.then(upload(file));
+        for (File file : files) {
+            try {
+                upload(file);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload file: " + file.getName(), e);
             }
-            return uploads;
-
-        } catch (Exception e) {
-            return Mono.error(e);
         }
     }
 
-    private Mono<Void> upload(File file) throws IOException {
+    private void upload(File file) throws IOException {
         String id = UUID.randomUUID().toString();
         String fileName = id + "-" + file.getName();
         byte[] bytes = Files.readAllBytes(file.toPath());
+        String title = deriveTitle(file.getName());
 
-        return client.uploadImage(bytes, fileName);
+        client.uploadImage(bytes, fileName, title, null);
+    }
+
+    private String deriveTitle(String originalName) {
+        int dotIndex = originalName.lastIndexOf('.');
+        String nameWithoutExtension = dotIndex > 0 ? originalName.substring(0, dotIndex) : originalName;
+        return nameWithoutExtension.replace('_', ' ').trim();
     }
 
     public List<GalleryImage> getAllImages() {
         return client.fetchAllImages();
     }
 
-    public Mono<GalleryImage> getImageById(int id) {
-        return client.fetchImageByID(id);
+    public Optional<GalleryImage> getImageById(int id) {
+        return client.fetchImageById(id);
     }
 
-    public Mono<ResponseEntity<GalleryImage>> updateImage(int id, ImageRequestDto image) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateImage'");
-    }
 }

@@ -146,6 +146,98 @@ class GalleryServiceTest {
         assertEquals(expected, actual);
     }
 
+    @Test
+    void getVisibleImagesFiltersOutHiddenImages() {
+        GalleryImage visible = sampleImage(1L);
+        GalleryImage hidden = new GalleryImage(
+                2L,
+                "hidden.jpg",
+                "hidden",
+                "hidden",
+                "image-gallery/hidden.jpg",
+                true,
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                "https://example.com/hidden.jpg",
+                List.of("private")
+        );
+        StubSupabaseClient client = new StubSupabaseClient(
+                List.of(visible, hidden),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                false
+        );
+        GalleryService service = new GalleryService(client);
+
+        List<GalleryImage> actual = service.getVisibleImages(null);
+
+        assertEquals(List.of(visible), actual);
+    }
+
+    @Test
+    void getVisibleImagesFiltersByTag() {
+        GalleryImage nature = sampleImage(1L);
+        GalleryImage city = new GalleryImage(
+                2L,
+                "city.jpg",
+                "city",
+                "city",
+                "image-gallery/city.jpg",
+                false,
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                "https://example.com/city.jpg",
+                List.of("urban")
+        );
+        StubSupabaseClient client = new StubSupabaseClient(
+                List.of(nature, city),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                false
+        );
+        GalleryService service = new GalleryService(client);
+
+        List<GalleryImage> actual = service.getVisibleImages(List.of("nature"));
+
+        assertEquals(List.of(nature), actual);
+    }
+
+    @Test
+    void getVisibleImageByIdReturnsEmptyWhenHidden() {
+        GalleryImage hidden = new GalleryImage(
+                2L,
+                "hidden.jpg",
+                "hidden",
+                "hidden",
+                "image-gallery/hidden.jpg",
+                true,
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                "https://example.com/hidden.jpg",
+                List.of("private")
+        );
+        StubSupabaseClient client = new StubSupabaseClient(
+                List.of(),
+                Optional.of(hidden),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                false
+        );
+        GalleryService service = new GalleryService(client);
+
+        Optional<GalleryImage> actual = service.getVisibleImageById(2);
+
+        assertEquals(Optional.empty(), actual);
+    }
+
     private static GalleryImage sampleImage(long id) {
         return new GalleryImage(
                 id,

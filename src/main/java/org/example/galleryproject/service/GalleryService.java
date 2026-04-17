@@ -3,7 +3,10 @@ package org.example.galleryproject.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -61,6 +64,51 @@ public class GalleryService {
 
     public Optional<GalleryImage> getImageById(int id) {
         return client.fetchImageById(id);
+    }
+
+    public List<GalleryImage> getVisibleImages(List<String> tags) {
+        List<GalleryImage> visibleImages = client.fetchAllImages().stream()
+                .filter(image -> !image.hidden())
+                .collect(Collectors.toList());
+
+        List<String> normalizedTags = normalizeTags(tags);
+        if (normalizedTags.isEmpty()) {
+            return visibleImages;
+        }
+
+        return visibleImages.stream()
+                .filter(image -> {
+                    List<String> imageTags = image.tags() == null ? Collections.emptyList() : image.tags();
+                    return imageTags.stream()
+                            .map(tag -> tag == null ? "" : tag.trim().toLowerCase(Locale.ROOT))
+                            .anyMatch(normalizedTags::contains);
+                })
+                .collect(Collectors.toList());
+    }
+
+    public Optional<GalleryImage> getVisibleImageById(int id) {
+        return client.fetchImageById(id).filter(image -> !image.hidden());
+    }
+
+    private List<String> normalizeTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> normalized = new ArrayList<>();
+        for (String rawTag : tags) {
+            if (rawTag == null || rawTag.isBlank()) {
+                continue;
+            }
+            String[] splitByComma = rawTag.split(",");
+            for (String part : splitByComma) {
+                String cleaned = part.trim().toLowerCase(Locale.ROOT);
+                if (!cleaned.isBlank() && !normalized.contains(cleaned)) {
+                    normalized.add(cleaned);
+                }
+            }
+        }
+        return normalized;
     }
 
     public Optional<GalleryImage> updateImageMetadata(int id, ImageRequestDto imageRequest) {

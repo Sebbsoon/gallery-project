@@ -24,7 +24,20 @@ class GalleryControllerTest {
                 new StubGalleryService(expected, Optional.empty(), Optional.empty(), Optional.empty(), false)
         );
 
-        ResponseEntity<List<GalleryImage>> response = controller.getAllImages();
+        ResponseEntity<List<GalleryImage>> response = controller.getVisibleImages(null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+    }
+
+    @Test
+    void getAllImagesForAdminReturnsOkAndBody() {
+        List<GalleryImage> expected = List.of(sampleImage(1L), sampleImage(2L));
+        GalleryController controller = new GalleryController(
+                new StubGalleryService(expected, Optional.empty(), Optional.empty(), Optional.empty(), false)
+        );
+
+        ResponseEntity<List<GalleryImage>> response = controller.getAllImagesForAdmin();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
@@ -285,12 +298,17 @@ class GalleryControllerTest {
         }
 
         @Override
+        public List<GalleryImage> getVisibleImages(List<String> tags) {
+            return allImages;
+        }
+
+        @Override
         public List<GalleryImage> getAllImages() {
             return allImages;
         }
 
         @Override
-        public Optional<GalleryImage> getImageById(int id) {
+        public Optional<GalleryImage> getVisibleImageById(int id) {
             return imageById;
         }
 

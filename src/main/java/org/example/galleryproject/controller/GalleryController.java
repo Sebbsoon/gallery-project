@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,14 +31,22 @@ public class GalleryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<GalleryImage>> getAllImages() {
+    public ResponseEntity<List<GalleryImage>> getVisibleImages(
+            @RequestParam(name = "tag", required = false) List<String> tags
+    ) {
+        List<GalleryImage> images = galleryService.getVisibleImages(tags);
+        return ResponseEntity.ok().body(images);
+    }
+
+    @GetMapping("/admin")
+    public ResponseEntity<List<GalleryImage>> getAllImagesForAdmin() {
         List<GalleryImage> images = galleryService.getAllImages();
         return ResponseEntity.ok().body(images);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<GalleryImage> getImagesById(@PathVariable int id) {
-        return galleryService.getImageById(id)
+        return galleryService.getVisibleImageById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

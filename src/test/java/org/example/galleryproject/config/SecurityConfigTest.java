@@ -40,9 +40,32 @@ class SecurityConfigTest {
 
     @Test
     void getImagesIsAccessibleWithoutAuthentication() throws Exception {
-        when(galleryService.getAllImages()).thenReturn(List.of());
+        when(galleryService.getVisibleImages(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/images"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAdminImagesRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/images/admin"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAdminImagesForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/images/admin")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAdminImagesForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.getAllImages()).thenReturn(List.of(sampleImage(1L)));
+
+        mockMvc.perform(get("/api/images/admin")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk());
     }
 

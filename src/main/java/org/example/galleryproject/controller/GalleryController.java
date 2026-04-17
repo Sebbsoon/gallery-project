@@ -2,12 +2,16 @@ package org.example.galleryproject.controller;
 
 import java.util.List;
 
+import org.example.galleryproject.controller.dto.ImageRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,15 +47,14 @@ public class GalleryController {
             return ResponseEntity.internalServerError().build();
         }
     }
-    /*
-     * @PutMapping("/{id}")
-     * public Mono<ResponseEntity<GalleryImage>> updateImage(@PathVariable int
-     * id, @RequestParam ImageRequestDto image) {
-     * return galleryService.updateImage(id, image)
-     * .map(updated -> ResponseEntity
-     * .created(URI.create("/images/" + updated.id()))
-     * .body(updated))
-     * .defaultIfEmpty(ResponseEntity.notFound().build());
-     * }
-     */
+
+    @PutMapping("/{id}")
+    public ResponseEntity<GalleryImage> updateImageMetadata(
+            @PathVariable int id,
+            @Valid @RequestBody ImageRequestDto imageRequest
+    ) {
+        return galleryService.updateImageMetadata(id, imageRequest)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 }

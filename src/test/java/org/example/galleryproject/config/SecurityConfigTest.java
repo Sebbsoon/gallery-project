@@ -1,7 +1,10 @@
 package org.example.galleryproject.config;
 
 import java.util.List;
+import java.util.Optional;
 
+import org.example.galleryproject.controller.dto.ImageRequestDto;
+import org.example.galleryproject.model.GalleryImage;
 import org.example.galleryproject.service.GalleryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +15,13 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -57,5 +63,50 @@ class SecurityConfigTest {
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateMetadataRequiresAuthentication() throws Exception {
+        mockMvc.perform(put("/api/images/1")
+                        .contentType("application/json")
+                        .content("{\"title\":\"Updated\",\"description\":\"Desc\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updateMetadataForGuestTokenIsForbidden() throws Exception {
+        mockMvc.perform(put("/api/images/1")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt())
+                        .contentType("application/json")
+                        .content("{\"title\":\"Updated\",\"description\":\"Desc\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateMetadataForAdminTokenIsAllowed() throws Exception {
+        when(galleryService.updateImageMetadata(anyInt(), any(ImageRequestDto.class)))
+                .thenReturn(Optional.of(sampleImage(1L)));
+
+        mockMvc.perform(put("/api/images/1")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .contentType("application/json")
+                        .content("{\"title\":\"Updated\",\"description\":\"Desc\"}"))
+                .andExpect(status().isOk());
+    }
+
+    private GalleryImage sampleImage(long id) {
+        return new GalleryImage(
+                id,
+                "image.jpg",
+                "title",
+                "description",
+                "image-gallery/image.jpg",
+                false,
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                "https://example.com/image.jpg",
+                List.of("nature")
+        );
     }
 }

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.example.galleryproject.client.SupabaseClient;
+import org.example.galleryproject.controller.dto.ImageRequestDto;
 import org.example.galleryproject.model.GalleryImage;
 import org.springframework.stereotype.Service;
 
@@ -57,6 +58,10 @@ public class GalleryService {
 
     public Optional<GalleryImage> getImageById(int id) {
         return client.fetchImageById(id);
+    }
+
+    public Optional<GalleryImage> updateImageMetadata(int id, ImageRequestDto imageRequest) {
+        return client.updateImageMetadata(id, imageRequest.title(), imageRequest.description());
     }
 
 }

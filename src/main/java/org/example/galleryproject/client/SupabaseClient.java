@@ -104,6 +104,34 @@ public class SupabaseClient {
         return Optional.of(toGalleryImage(row, tagsByImageId.getOrDefault(row.id(), Collections.emptyList())));
     }
 
+    public Optional<GalleryImage> updateImageMetadata(int id, String title, String description) {
+        URI uri = UriComponentsBuilder.fromPath("/rest/v1/{table}")
+                .queryParam("id", "eq." + id)
+                .queryParam("select", "id,file_name,title,description,bucket_path,is_hidden,created_at,updated_at")
+                .buildAndExpand(SUPABASE_DB_NAME)
+                .toUri();
+
+        Map<String, Object> patchPayload = new LinkedHashMap<>();
+        patchPayload.put("title", title);
+        patchPayload.put("description", description);
+
+        List<SupabaseImageRecord> rows = restClient.patch()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Prefer", "return=representation")
+                .body(patchPayload)
+                .retrieve()
+                .body(IMAGE_LIST_TYPE);
+
+        if (rows == null || rows.isEmpty()) {
+            return Optional.empty();
+        }
+
+        SupabaseImageRecord row = rows.getFirst();
+        Map<Long, List<String>> tagsByImageId = fetchTagsByImageIds(List.of(row.id()));
+        return Optional.of(toGalleryImage(row, tagsByImageId.getOrDefault(row.id(), Collections.emptyList())));
+    }
+
     public List<GalleryImage> fetchAllImages() {
         URI uri = UriComponentsBuilder.fromPath("/rest/v1/{table}")
                 .queryParam("select", "id,file_name,title,description,bucket_path,is_hidden,created_at,updated_at")
